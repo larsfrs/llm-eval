@@ -1,0 +1,48 @@
+{
+  "version": "v2",
+  "models": [
+    {
+      "name": "Qwen3.6-35B-A3B-UD-Q4_K_M",
+      "base_url": "http://192.168.0.95:8080/v1",
+      "model_id": "Qwen3.6-35B-A3B-UD-Q4_K_M",
+      "api_key_env": "API_KEY_LOCAL",
+      "params": {
+        "temperature": 1.0,
+        "top_p": 0.95,
+        "top_k": 20,
+        "presence_penalty": 1.5,
+        "max_tokens": 4096
+      }
+    }
+  ],
+  "runs": [
+    {
+      "name": "det",
+      "temperature": 0.0,
+      "top_p": 1.0,
+      "top_k": 1,
+      "presence_penalty": 0.0,
+      "max_tokens": 4096
+    }
+  ],
+  "suites": [
+    {
+      "name": "static",
+      "prepare": null,
+      "data": "data/static/questions1.json",
+      "eval": "default"
+    },
+    {
+      "name": "linguistic_benchmark",
+      "prepare": "prepare/linguistic_benchmark.py",
+      "data": "data/prepared/linguistic_benchmark.json",
+      "eval": "default"
+    },
+    {
+      "name": "rg",
+      "prepare": "prepare/rg.py",
+      "data": "data/prepared/rg.json",
+      "eval": "rg"
+    }
+  ]
+}

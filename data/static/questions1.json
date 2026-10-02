@@ -1,0 +1,60 @@
+[
+  {
+    "index": 1,
+    "name": "car_wash",
+    "category": "General",
+    "source": "static",
+    "question": "I want to wash my car. The car wash is 50 meters away. Should I walk or drive?",
+    "human_answer": "Drive. The car has to be at the car wash to be washed, so walking there without the car defeats the purpose.",
+    "correct_answer": "Drive",
+    "multiple_choice": [
+      "Walk",
+      "Drive"
+    ],
+    "answer_index": 2
+  },
+  {
+    "index": 2,
+    "name": "strawberry_r_count",
+    "category": "General",
+    "source": "static",
+    "question": "How many r's are in the word 'strawberry'?",
+    "human_answer": "Three. s-t-r-a-w-b-e-r-r-y has r's at positions 3, 8 and 9.",
+    "correct_answer": 3,
+    "multiple_choice": null
+  },
+  {
+    "index": 3,
+    "name": "9.11_vs_9.9",
+    "category": "General",
+    "source": "static",
+    "question": "Which number is larger: 9.11 or 9.9?",
+    "human_answer": "9.9. Written with equal decimal length, 9.90 > 9.11.",
+    "correct_answer": "9.9",
+    "multiple_choice": [
+      "9.11",
+      "9.9"
+    ],
+    "answer_index": 2
+  },
+  {
+    "index": 4,
+    "name": "alice_sisters",
+    "category": "General",
+    "source": "static",
+    "question": "Alice has 2 brothers and 3 sisters. How many sisters does Alice's brother have?",
+    "human_answer": "4. The family has 4 girls in total (Alice plus her 3 sisters), so each of her 2 brothers has 4 sisters.",
+    "correct_answer": 4,
+    "multiple_choice": null
+  },
+  {
+    "index": 5,
+    "name": "bat_and_ball",
+    "category": "General",
+    "source": "static",
+    "question": "A bat and a ball cost $1.10 in total. The bat costs $1.00 more than the ball. How much does the ball cost, in dollars?",
+    "human_answer": "0.05. With the ball at $0.05 the bat is $1.05: together $1.10, difference $1.00.",
+    "correct_answer": 0.05,
+    "multiple_choice": null
+  }
+]
