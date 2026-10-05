@@ -35,6 +35,26 @@ TIERED_DATASETS = [
         ("medium", dict(num_people=4, num_characteristics=4), 1),
         ("hard", dict(num_people=5, num_characteristics=5), 1),
     ]),
+    ("jugs", [
+        ("easy", dict(num_jugs=3, difficulty=5), 1),
+        ("hard", dict(num_jugs=3, difficulty=10), 1),
+    ]),
+    ("graph_color", [
+        ("easy", dict(num_colors=3, min_num_vertices=6, max_num_vertices=6,
+                      edge_probability=0.3), 1),
+        ("hard", dict(num_colors=3, min_num_vertices=10, max_num_vertices=10,
+                      edge_probability=0.3), 1),
+    ]),
+    ("course_schedule", [
+        ("easy", dict(min_num_courses=5, max_num_courses=5, min_num_prerequisites=1,
+                      max_num_prerequisites=1, p_solvable=0.5), 1),
+        ("hard", dict(min_num_courses=10, max_num_courses=10, min_num_prerequisites=1,
+                      max_num_prerequisites=2, p_solvable=0.5), 1),
+    ]),
+    ("self_reference", [
+        ("easy", dict(difficulty=2), 1),
+        ("hard", dict(difficulty=7), 1),
+    ]),
 ]
 
 

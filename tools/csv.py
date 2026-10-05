@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Reading and writing result rows in the single results.csv.
 
-Rows are upserted: a combo writes its row after every suite (suites not
-run yet stay empty), replacing its previous partial line in place. The
-score is written only when the combo finishes — an empty score marks an
-interrupted combo, so reruns pick it up and replace the partial line.
+Rows are upserted: a combo rewrites its line after every suite it touched,
+keeping the cells it already answered. Empty question cells are the unit
+of work (cell-level resume): the score is written only once every cell is
+filled, so an empty score marks a combo that still has questions to run.
+sync_header grows the header to the configured columns, giving every
+existing row its empty cells for new questions.
 """
 
 import csv
@@ -13,32 +15,60 @@ import os
 # Fixed columns; each suite appends its "{suite}_Q{n}" columns after these.
 FIXED_FIELDS = [
     "model", "version", "run", "repeat",
-    "temperature", "top_p", "top_k", "presence_penalty", "max_tokens",
+    "temperature", "top_p", "top_k", "min_p", "presence_penalty",
+    "repeat_penalty", "max_tokens",
     "score",
 ]
-# Columns identifying a combo, used to find and skip already-completed rows.
+# Columns identifying a combo: its row is looked up, resumed and replaced
+# by these — all params are identity, so changed params re-measure. (When
+# min_p/repeat_penalty joined mid-v2, existing rows were backfilled with
+# the llama.cpp defaults so their keys kept matching.)
 KEY_FIELDS = FIXED_FIELDS[:-1]
 
 
-def read_completed(csv_path):
-    """Return the combo keys of COMPLETED rows.
+def read_rows(csv_path):
+    """All rows of the file keyed by combo key: {key: row}.
 
-    A row counts as complete only once its score is written. A row with an
-    empty score belongs to an interrupted combo: it does not count as
-    done, and rerunning replaces its partial line in place.
+    Rows without this schema's key columns cannot be keyed and are
+    skipped; they stay in the file untouched.
     """
-    done = set()
+    rows = {}
     if not os.path.isfile(csv_path):
-        return done
+        return rows
     with open(csv_path, newline="") as f:
         for row in csv.DictReader(f):
             try:
                 key = tuple(row[k] for k in KEY_FIELDS)
             except KeyError:
-                break  # foreign schema, treat as fresh
-            if row.get("score", ""):
-                done.add(key)
-    return done
+                continue  # foreign schema, cannot key it
+            rows[key] = row
+    return rows
+
+
+def sync_header(csv_path, fieldnames):
+    """Grow the file's header to the configured columns.
+
+    Existing columns keep their position and data; configured columns
+    missing from the file are appended, and every existing row gains an
+    empty cell for them (new questions). Returns the added column names,
+    empty when the file is missing or already in sync.
+    """
+    if not os.path.isfile(csv_path):
+        return []
+    with open(csv_path, newline="") as f:
+        reader = csv.DictReader(f)
+        header = list(reader.fieldnames or [])
+        rows = list(reader)
+    added = [name for name in fieldnames if name not in header]
+    if not added:
+        return []
+    with open(csv_path, "w", newline="") as f:
+        writer = csv.DictWriter(
+            f, fieldnames=header + added, restval="", extrasaction="ignore"
+        )
+        writer.writeheader()
+        writer.writerows(rows)
+    return added
 
 
 def upsert_row(csv_path, row, fieldnames):

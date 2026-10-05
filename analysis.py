@@ -1,23 +1,24 @@
 #!/usr/bin/env python3
 """Overview graphs from results.csv.
 
-One stacked bar per model, ranked best-first by total questions passed in
-the deterministic run: y axis = passed questions of the deterministic
-run, colored segments = the datasets (one per suite, e.g. static,
-linguistic_benchmark, rg). Black whiskers centered on each
-bar top show det ± 5*std of the sampled runs (the README methodology), and
-a dotted reference line marks the total number of configured questions.
-A small note box in the top-right corner explains bars vs whiskers in
-plain words (the title carries no version).
+One group of slim stacked bars per model, ranked best-first by total
+questions passed in the deterministic run: within a group the det bar
+stands on the left and every sampled run to its right, each bar marked
+d / s just below the axis. Colored segments = the datasets (one per
+suite, e.g. static, linguistic_benchmark, rg), the bare pass count
+printed inside each segment and each section's question total in the
+legend. A dotted reference line marks the total number of configured
+questions; inside each group a dotted black line crosses the bars at
+the model's average total passed across all of its runs.
+A small note box in the top-right corner explains the groups in plain
+words (the title carries no version).
 Writes plots/results_overview.svg (the OUT env var overrides).
 Run: uv run analysis.py
 """
 
 import csv
 import json
-import math
 import os
-import statistics
 import sys
 
 import matplotlib
@@ -28,10 +29,6 @@ import matplotlib.pyplot as plt
 from tools import settings
 
 OUT_PATH = os.environ.get("OUT", os.path.join("plots", "results_overview.svg"))
-
-# the README methodology: score = deterministic run +- 5 * std of the
-# sampled runs
-ERROR_STDEV_MULTIPLE = 5
 
 
 def load_dataset_labels():
@@ -74,9 +71,9 @@ def count_questions_per_dataset(labels_by_suite):
 def collect_results_per_model(labels_by_suite, version):
     """Two aggregates from results.csv, finished rows of the given version.
 
-    Returns (det_counts_by_model, sampled_totals_by_model):
+    Returns (det_counts_by_model, sampled_counts_by_model):
     - det: model -> dataset -> passed count (the bar segments)
-    - smp: model -> list of passed totals, one entry per sampled run
+    - smp: model -> list of dataset -> passed count, one per sampled run
 
     Columns are resolved by NAME from the header, so files from before a
     schema change (or with columns in a different order) never misread.
@@ -106,10 +103,10 @@ def collect_results_per_model(labels_by_suite, version):
                 label = labels_by_suite.get(suite_name, {}).get(int(question_number))
                 question_columns.append((position, label))
 
-        # det rows become the bar segments, sampled rows only the error;
+        # det rows become the d bars, sampled runs the s bars;
         # rows of other (or pre-versioning) question sets do not count
         det_counts_by_model = {}
-        sampled_totals_by_model = {}
+        sampled_counts_by_model = {}
         for fields in result_rows:
             if len(fields) <= score_col:
                 continue
@@ -135,15 +132,18 @@ def collect_results_per_model(labels_by_suite, version):
                 for label in passed_datasets:
                     dataset_counts[label] = dataset_counts.get(label, 0) + 1
             else:
-                sampled_totals_by_model.setdefault(fields[model_col], []).append(
-                    len(passed_datasets)
+                run_counts = {}
+                for label in passed_datasets:
+                    run_counts[label] = run_counts.get(label, 0) + 1
+                sampled_counts_by_model.setdefault(fields[model_col], []).append(
+                    run_counts
                 )
-    return det_counts_by_model, sampled_totals_by_model
+    return det_counts_by_model, sampled_counts_by_model
 
 
-def plot_overview(det_counts_by_model, sampled_totals_by_model,
+def plot_overview(det_counts_by_model, sampled_counts_by_model,
                  question_totals_by_dataset, total_questions, version):
-    """Stacked bar chart with error whiskers and a reference line."""
+    """Grouped stacked bars: the det run and every sampled run per model."""
     # rank models best-first by their det total passed; alphabetical
     # tiebreak keeps the order stable
     models = sorted(
@@ -157,107 +157,119 @@ def plot_overview(det_counts_by_model, sampled_totals_by_model,
         {dataset for counts in det_counts_by_model.values() for dataset in counts}
     )
 
-    # build the stacked bars: each dataset adds its segment on top of the
-    # previous ones, per model, with its passed count printed inside
-    figure, axis = plt.subplots(figsize=(8, 6))  # extra height for upright names
-    bottom_offsets = [0] * len(models)
-    for dataset in dataset_names:
-        segment_heights = [
-            det_counts_by_model[model].get(dataset, 0) for model in models
+    # one group of slim bars per model: the det bar on the left, every
+    # sampled run to its right, each marked d / s just below the axis
+    figure, axis = plt.subplots(figsize=(12, 7))
+    bar_width, bar_gap, group_spacing = 0.22, 0.05, 1.5
+    below_axis = axis.get_xaxis_transform()  # x in data, y in axes units
+    group_centers = []
+    for group_number, model in enumerate(models):
+        runs = [("d", det_counts_by_model[model])] + [
+            ("s", section_counts)
+            for section_counts in sampled_counts_by_model.get(model, [])
         ]
-        axis.bar(models, segment_heights, bottom=bottom_offsets, label=dataset,
-                 width=0.6)
-
-        # the "passed/total" fraction goes beside each segment — the space
-        # above the bar belongs to the error whisker (empty segments get
-        # no label)
-        segment_total = question_totals_by_dataset[dataset]
-        for bar_position, (offset, height) in enumerate(
-            zip(bottom_offsets, segment_heights)
-        ):
-            if height > 0:
-                axis.text(
-                    bar_position + 0.32, offset + height / 2,
-                    f"{height}/{segment_total}",
-                    ha="left", va="center", fontsize=9, color="black",
+        group_center = group_number * group_spacing
+        group_width = len(runs) * bar_width + (len(runs) - 1) * bar_gap
+        left = group_center - group_width / 2
+        for run_number, (mark, section_counts) in enumerate(runs):
+            bar_x = left + run_number * (bar_width + bar_gap)
+            bottom = 0
+            for dataset_index, dataset in enumerate(dataset_names):
+                height = section_counts.get(dataset, 0)
+                axis.bar(
+                    bar_x, height, bottom=bottom, width=bar_width,
+                    color=f"C{dataset_index}",
                 )
-        bottom_offsets = [
-            offset + height
-            for offset, height in zip(bottom_offsets, segment_heights)
-        ]
-
-    # black whiskers centered on the bar top: det ± 5 * std of the sampled
-    # runs — the segment counts sit beside the bar, so the lower arm
-    # reaching into the bar is unobstructed. Models run deterministically
-    # only get NaN, which skips that bar's error bar entirely
-    error_sizes = []
-    sampled_run_counts = []
-    for model in models:
-        sampled_totals = sampled_totals_by_model.get(model, [])
-        if len(sampled_totals) >= 2:
-            error_sizes.append(
-                ERROR_STDEV_MULTIPLE * statistics.stdev(sampled_totals)
-            )
-            sampled_run_counts.append(len(sampled_totals))
-        else:
-            error_sizes.append(float("nan"))
-            sampled_run_counts.append(0)
-    axis.errorbar(
-        models, bottom_offsets, yerr=error_sizes, fmt="none",
-        ecolor="black", capsize=4,
-    )
-
-    # mini label on each whisker: how many sampled runs it is built from
-    # (sample counts vary per model, so the number travels with the whisker)
-    for bar_position, (total, error, run_count) in enumerate(
-        zip(bottom_offsets, error_sizes, sampled_run_counts)
-    ):
-        if not math.isnan(error):
+                # bare pass count inside each segment; the section's
+                # total lives in the legend
+                if height:
+                    axis.text(
+                        bar_x, bottom + height / 2, str(height),
+                        ha="center", va="center", fontsize=8, color="white",
+                    )
+                bottom += height
             axis.text(
-                bar_position, total + error, f"smp: {run_count}",
-                ha="center", va="bottom", fontsize=7, color="black",
+                bar_x, -0.02, mark, transform=below_axis,
+                ha="center", va="top", fontsize=8, color="black",
             )
+
+        # dotted line across the group's bars at the model's average
+        # total passed over all of its runs (the d and every s one);
+        # bar() centers each bar on x, so the group's visual edge sits
+        # half a bar to the left of left
+        average_total = sum(
+            sum(section_counts.values()) for _, section_counts in runs
+        ) / len(runs)
+        group_left = left - bar_width / 2
+        axis.plot(
+            [group_left, group_left + group_width],
+            [average_total, average_total],
+            linestyle=":", color="black",
+        )
+        group_centers.append(group_center)
 
     # dotted reference line: every question of every configured suite
-    axis.axhline(
+    reference_line = axis.axhline(
         total_questions, linestyle=":", color="gray",
         label=f"{total_questions} questions total",
     )
 
     # axes, legend, and the png
-    axis.set_xlim(-0.55, len(models) - 0.5 + 0.45)  # room for the side fractions
+    axis.set_xlim(group_centers[0] - 0.8, group_centers[-1] + 0.8)
+    axis.set_xticks(group_centers)
+    axis.set_xticklabels(models, rotation=90)
+    axis.tick_params(axis="x", pad=18)  # model names sit below the d/s marks
     axis.set_ylabel("questions passed")
-    axis.set_xlabel("model")
-    # upright model names: horizontal ones crowd once more models join
-    axis.tick_params(axis="x", labelrotation=90)
     axis.set_title("passed questions per model")
 
-    # plain-words note box pinned to the top-right corner: bars vs
-    # whiskers. The legend is anchored just below it — loc="best" cannot
-    # see the note and would collide with it
+    # legend: one entry per section, carrying its question total (the
+    # counts inside the bars are bare; the /total lives here)
+    section_handles = [
+        matplotlib.patches.Patch(
+            color=f"C{dataset_index}",
+            label=f"{dataset} ({question_totals_by_dataset[dataset]})",
+        )
+        for dataset_index, dataset in enumerate(dataset_names)
+    ]
+    # proxy handle standing in for every group's average line
+    average_handle = matplotlib.lines.Line2D(
+        [0], [0], linestyle=":", color="black",
+        label="model average (all runs)",
+    )
+    axis.legend(
+        handles=[*section_handles, reference_line, average_handle],
+        title="dataset", loc="upper right", bbox_to_anchor=(1.0, 0.80),
+    )
+
+    # plain-words note box pinned to the top-right corner: the legend is
+    # anchored just below it — loc="best" cannot see the note and would
+    # collide with it
     axis.text(
         0.98, 0.97,
-        f"Each bar is one deterministic run.\n"
-        f"Whiskers, where present, show ±{ERROR_STDEV_MULTIPLE}·std "
-        f"of the sampled runs.",
+        "Each group: the d bar is the deterministic run,\n"
+        "the s bars are its sampled runs. Counts inside the\n"
+        "bars are passes per section; each section's total\n"
+        "is in the legend. The sections are described in\n"
+        "the sections below.",
         transform=axis.transAxes, ha="right", va="top", fontsize=8,
         bbox={"boxstyle": "round", "facecolor": "white", "edgecolor": "gray"},
     )
-    axis.legend(title="dataset", loc="upper right", bbox_to_anchor=(1.0, 0.86))
     figure.tight_layout()
     os.makedirs(os.path.dirname(OUT_PATH) or ".", exist_ok=True)
     figure.savefig(OUT_PATH)
     print(f"Wrote {OUT_PATH} (version {version})")
 
-    # per-model totals and error in the console
-    for model, total, error in zip(models, bottom_offsets, error_sizes):
-        if math.isnan(error):
-            print(f"  {model}: {total} passed (deterministic only)")
-        else:
-            print(
-                f"  {model}: {total} passed "
-                f"(det ± {ERROR_STDEV_MULTIPLE}*std = ±{error:.1f})"
+    # per-model totals in the console: det plus every sampled run's total
+    for model in models:
+        det_total = sum(det_counts_by_model[model].values())
+        sampled_runs = sampled_counts_by_model.get(model, [])
+        if sampled_runs:
+            run_totals = ", ".join(
+                str(sum(run.values())) for run in sampled_runs
             )
+            print(f"  {model}: {det_total} det; sampled runs: {run_totals}")
+        else:
+            print(f"  {model}: {det_total} (deterministic only)")
 
 
 def main():
@@ -265,11 +277,11 @@ def main():
     question_totals_by_dataset = count_questions_per_dataset(labels_by_suite)
     total_questions = sum(question_totals_by_dataset.values())
     version = load_current_version()
-    det_counts_by_model, sampled_totals_by_model = collect_results_per_model(
+    det_counts_by_model, sampled_counts_by_model = collect_results_per_model(
         labels_by_suite, version
     )
     plot_overview(
-        det_counts_by_model, sampled_totals_by_model,
+        det_counts_by_model, sampled_counts_by_model,
         question_totals_by_dataset, total_questions, version,
     )
 

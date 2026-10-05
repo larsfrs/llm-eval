@@ -8,15 +8,18 @@ I record results in a CSV from which the result graphs below are made.
 
 | Model | #b parameters (active/effective) | #b parameters (total) | architecture | thinking | quantization | release date (YYYY-MM) | licence |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `[Done]` [gemma-4-E4B-it-Q4_K_M]() | 4.5B | ~8B | Dense + PLE | yes | Q4_K_M | 2026-04 | Apache 2.0 | 
-| `[Done]` [Qwen3.5-2B-Q4_K_M]() | 2B | 2B | Dense | yes | Q4_K_M | 2026-03 | Apache 2.0 | 
-| `[Done]` [Qwen3.5-9B-Q4_K_M]() | 9B | 9B | Dense | yes | Q4_K_M | 2026-03 | Apache 2.0 | 
-| `[Done]` [Ornith-1.5-9B-Q4_K_M]() | 9B | 9B | Dense | yes | Q4_K_M | 2026-03 | MIT | 
+| `[Done]` [gemma-4-E4B-it-Q4_K_M]() | 4.5B effective | ~8B | Dense | yes, switchable | Q4_K_M | 2026-04 | Apache 2.0 |
+| `[Done]` [Qwen3.5-2B-Q4_K_M]() | ~2B | ~2B | Dense | yes, off by default | Q4_K_M | 2026-03 | Apache 2.0 |
+| `[Done]` [Qwen3.5-9B-Q4_K_M]() | ~9B | ~9B | Dense | yes, on by default | Q4_K_M | 2026-03 | Apache 2.0 |
+| `[Done]` [Ornith-1.5-9B-Q4_K_M]() | ~9B | ~9B | Dense | yes, on by default | Q4_K_M | 2026-08 | MIT |
+| `[Done]` [Qwen3.6-35B-A3B-UD-Q4_K_M]() | ~3B | ~35B | MoE | yes, on by default | UD-Q4_K_M | 2026-04 | Apache 2.0 |
+| `[Done]` [Phi-4-mini-instruct-Q4_K_M]() | 3.8B | 3.8B | Dense | no dedicated thinking mode | Q4_K_M | 2025-02 | MIT |
+| `[Done]` [Qwen/Qwen2.5-Coder-7B-Instruct-GGUF]() | ~7B | ~7B | Dense | no dedicated thinking mode | Q4_K_M | 2024-09 | Apache 2.0 |
 
 
 #### Results
 
-![questions passed per model, stacked by dataset, deterministic bars with det ± 5·std error whiskers](plots/results_overview.svg)
+![questions passed per model, grouped stacked bars per run (d = deterministic, s = sampled), counts inside segments, section totals in the legend](plots/results_overview.svg)
 
 Regenerate with `uv run analysis.py`.
 
@@ -44,9 +47,9 @@ uv run eval.py
                   "presence_penalty": 1.5, "max_tokens": 4096 } }
   ],
   "runs": [
-    { "name": "det", "temperature": 0.0, "top_p": 1.0, "top_k": 1,
-      "presence_penalty": 0.0, "max_tokens": 4096 },
-    { "name": "smp", "repeats": 3 }
+    { "name": "det", "temperature": 0.0, "top_p": 1.0, "top_k": 1, "min_p": 0.0,
+      "presence_penalty": 0.0, "repeat_penalty": 1.0, "max_tokens": 4096 },
+    { "name": "smp", "repeats": 3, "max_tokens": 4096 }
   ],
   "suites": [
     { "name": "static", "prepare": null,
@@ -63,7 +66,7 @@ uv run eval.py
   `model_id` say where and what to call, `api_key_env` names the env var
   holding the API key (never the key itself), `params` is that model's
   sampling defaults
-- `runs`: sampling regimes. "det" pins greedy; all four knobs must stay
+- `runs`: sampling regimes. "det" pins greedy; all six knobs must stay
   pinned or det inherits the model's settings and stops being
   deterministic. "smp" runs 3 repeats with the model's own `params`.
   Precedence: defaults < model `params` < run
@@ -97,7 +100,7 @@ Specifically, for evaluation, the data used needs to be:
 
 I want to specifically examine models that run on local hardware like consumer GPUs, and track their improvement, as this is most likely the long term most sustainable option to run LLMs.
 
-### Data (43 questions)
+### Data (51 questions)
 
 1. **General Questions**: *(5 questions)*
   - This is just hand curated with well known logic problems and the most current logic breaking prompts like the car-wash and strawberry question.
@@ -111,7 +114,7 @@ I want to specifically examine models that run on local hardware like consumer G
   - But, they address very specifically shortcomings of LLMs, and models still fail them, so their are still interesting to evaluate.
   - Here, passing means the model is good at shedding its language model behaviour, and focuses better on logical reasoning.
 
-3. **Reasoning Gym**: *(8 questions, one per puzzle x difficulty)*
+3. **Reasoning Gym**: *(16 questions, one per puzzle x difficulty)*
   - This is the actually interesting logic test. The puzzles are procedually generated, require no special knowledge,
     involve no tool calls, need no exact calculations, and are invariant to if the LLM has seen the question setup before.
   - Here, interesting is how many questions the model gets right, especially in comparison to other models.
@@ -120,6 +123,10 @@ I want to specifically examine models that run on local hardware like consumer G
     - `knights_knaves(n_people = 3, depth_constraint = 3)` and increasing of `n_people` and `depth_constraint`
     - `cryptarithm()`
     - `zebra_puzzles(num_people = 4, num_characteristics = 4)`
+    - `jugs(num_jugs = 3, difficulty = 5 and 10)`
+    - `graph_color(num_colors = 3, num_vertices = 6 and 10)`
+    - `course_schedule(num_courses = 5 and 10)`
+    - `self_reference(difficulty = 2 and 7)`
 
 ### Evaluation
 

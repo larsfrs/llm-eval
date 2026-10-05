@@ -32,7 +32,9 @@ def ask(model_id, base_url, api_key, params, body, system):
         "temperature": params["temperature"],
         "top_p": params["top_p"],
         "top_k": params["top_k"],
+        "min_p": params["min_p"],
         "presence_penalty": params["presence_penalty"],
+        "repeat_penalty": params["repeat_penalty"],
         "stream": True,
         "stream_options": {"include_usage": True},
     }
