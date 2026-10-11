@@ -9,16 +9,59 @@ key, so changing any re-measures on its own. min_p/repeat_penalty joined
 mid-v2; the existing rows were backfilled with the llama.cpp defaults
 (0.0 / 1.0) they were implicitly measured with, so nothing re-measured.
 
+Param columns record exactly what the model's params declare (values
+overridden by the run where declared) — the payload carries the declared
+knobs verbatim, nothing is injected anywhere. An empty param cell means
+the knob was not sent and the server's own default applied (a provider
+declaring only temperature/top_p/max_tokens leaves the other four cells
+empty). Rows recorded under the old DEFAULTS-injected merge keep their
+cells; the resume key re-measures only rows whose recorded params changed
+(only Phi-4-mini, the lone partial-declarer).
+
 Within a version, questions can be added but never changed or removed:
 new indices appear as empty cells in results.csv and are filled
 incrementally, one model at a time, as the models get served. Anything
 that touches what is already measured is a bump; results from different
 versions are not directly comparable.
 
-The active version is the topmost section below and matches the "version"
-key in eval.json. Bumping means: change the conditions in eval.json / the
-prepare configs, bump the "version" key, and add a new section on top.
-analysis.py only plots rows stamped with the active version.
+The active version is the section marked "(current)" below and matches the
+"version" key in eval.json. Bumping means: change the conditions in
+eval.json / the prepare configs, bump the "version" key, and add a new
+section on top. analysis.py only plots rows stamped with the active
+version; a "(planned)" section is a sketch, never the active version.
+
+## v3 (planned)
+
+Sketch, not active — nothing here applies until eval.json's "version"
+says v3. Problems the bump must solve:
+
+- Budget: some questions starve inside max_tokens 4096 — thinking
+  burns the budget before an answer is written. Pick the knob shape
+  (per-model budgets, per-suite tiers, or a global bump) and raise it.
+- Failure subtypes: cells record pass/fail only, so a wrong answer, a
+  forgotten <answer> tag and a budget-cut look identical (the transport
+  never reads finish_reason). Record why a cell failed — wrong /
+  no-tag / cut — so budget and tag problems become measurable per
+  model instead of console anecdotes.
+- Tag compliance: some models forget the tags. Stronger system prompt,
+  plus an audit of each model's think-tag variants: a model whose
+  thinking special.py does not strip leaks drafted answers into the
+  extraction channel. Grammar forcing stays out unless v3 deliberately
+  stops measuring instruction following.
+- Question growth: static is 5 questions, too thin to stand on — grow
+  it and/or add rg cells so the bump carries one comparable set.
+- rg re-roll: prepare/rg.py (SEED=42 today) moves to a new fixed seed
+  — a different constant, not randomness at prepare time; the prepared
+  file must stay frozen once generated. The bump re-measures everything
+  under the new stamp, so the old v2 rg cells keep their rows.
+(The model db item landed early, outside the bump: models.json + models.py
+render the README table, and analysis.py reads the reference models' param
+labels from the db.)
+
+Deferred, considered and left out of v3: smp final form (repeats 1 vs
+3, Phi-4-mini's non-sampled smp, the det +- 5*std aggregation), provider
+hygiene (router pre-flight model check, remote-det determinism sanity),
+housekeeping (gemma-4-26B-A4B orphan row, ask.py's debug print(payload)).
 
 ## v2 (current)
 

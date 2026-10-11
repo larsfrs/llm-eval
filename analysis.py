@@ -2,14 +2,21 @@
 """Overview graphs from results.csv.
 
 One group of slim stacked bars per model, ranked best-first by total
-questions passed in the deterministic run: within a group the det bar
-stands on the left and every sampled run to its right, each bar marked
-d / s just below the axis. Colored segments = the datasets (one per
+questions passed in its anchor run — the deterministic run, or the
+"ukn" run for models whose provider refuses sampling control (the
+claude entries): within a group the anchor bar stands on the left
+(marked d, or u for ukn) and every sampled run to its right, each bar
+marked just below the axis. Colored segments = the datasets (one per
 suite, e.g. static, linguistic_benchmark, rg), the bare pass count
 printed inside each segment and each section's question total in the
 legend. A dotted reference line marks the total number of configured
 questions; inside each group a dotted black line crosses the bars at
-the model's average total passed across all of its runs.
+the model's average total passed across all of its runs, with its
+share of the total questions riding the line's right end.
+Reference models (REFERENCE_MODELS) sit in their own block on the left,
+cut off from the ranked rest by an orange dotted line. Below the model
+names a thin strip carries one fact box per model, built from the model
+db: total params, active params, release ("Mon YYYY").
 A small note box in the top-right corner explains the groups in plain
 words (the title carries no version).
 Writes plots/results_overview.svg (the OUT env var overrides).
@@ -20,6 +27,7 @@ import csv
 import json
 import os
 import sys
+from datetime import datetime
 
 import matplotlib
 
@@ -29,6 +37,45 @@ import matplotlib.pyplot as plt
 from tools import settings
 
 OUT_PATH = os.environ.get("OUT", os.path.join("plots", "results_overview.svg"))
+
+# reference models: the frontier points the consumer-GPU models are
+# measured against — their own block on the left, cut off from the ranked
+# rest by an orange dotted line. Unmeasured references simply don't plot:
+# the chart's model list is the ranked rows intersected with this set.
+REFERENCE_MODELS = {
+    "zai-glm-5-3",
+    "claude-opus-4-8-no-think",
+    "claude-opus-5-think",
+    "claude-fable-5-1",
+}
+
+# the model db: models.json is the hand-maintained source of truth for
+# model metadata — the README's model table (rendered by models.py) and
+# the reference models' param labels come from it, not from hardcodes
+MODELS_DB = "models.json"
+
+
+def load_model_facts(models):
+    """Per-model fact boxes from the model db: total, active, Mon YYYY.
+
+    Every plotted model must carry a models.json entry (it feeds the
+    README table too); a missing one exits loudly."""
+    with open(MODELS_DB) as f:
+        db = {model.get("name"): model for model in json.load(f)}
+    facts = {}
+    for name in models:
+        entry = db.get(name)
+        if entry is None:
+            sys.exit(f"{MODELS_DB}: no entry for plotted model {name!r}")
+        lines = [entry["params_total"], entry["params_active"]]
+        released = entry.get("released", "")
+        if released:
+            try:
+                lines.append(datetime.strptime(released, "%Y-%m").strftime("%Y %b"))
+            except ValueError:
+                sys.exit(f"{MODELS_DB}: {name} 'released' must be YYYY-MM, got {released!r}")
+        facts[name] = "\n".join(lines)
+    return facts
 
 
 def load_dataset_labels():
@@ -69,10 +116,12 @@ def count_questions_per_dataset(labels_by_suite):
 
 
 def collect_results_per_model(labels_by_suite, version):
-    """Two aggregates from results.csv, finished rows of the given version.
+    """Three aggregates from results.csv, finished rows of the given version.
 
-    Returns (det_counts_by_model, sampled_counts_by_model):
-    - det: model -> dataset -> passed count (the bar segments)
+    Returns (det_counts_by_model, ukn_counts_by_model, sampled_counts_by_model):
+    - det: model -> dataset -> passed count (the d bar segments)
+    - ukn: same shape, for runs recorded as "ukn" — unknown sampling, the
+      u bars (models whose provider refuses sampling control)
     - smp: model -> list of dataset -> passed count, one per sampled run
 
     Columns are resolved by NAME from the header, so files from before a
@@ -103,9 +152,11 @@ def collect_results_per_model(labels_by_suite, version):
                 label = labels_by_suite.get(suite_name, {}).get(int(question_number))
                 question_columns.append((position, label))
 
-        # det rows become the d bars, sampled runs the s bars;
-        # rows of other (or pre-versioning) question sets do not count
+        # det rows become the d bars, ukn rows the u bars (unknown
+        # sampling), sampled runs the s bars; rows of other (or
+        # pre-versioning) question sets do not count
         det_counts_by_model = {}
+        ukn_counts_by_model = {}
         sampled_counts_by_model = {}
         for fields in result_rows:
             if len(fields) <= score_col:
@@ -127,8 +178,12 @@ def collect_results_per_model(labels_by_suite, version):
                 and fields[position] == "pass"
             ]
 
-            if fields[run_col] == "det":
-                dataset_counts = det_counts_by_model.setdefault(fields[model_col], {})
+            run_name = fields[run_col]
+            if run_name in ("det", "ukn"):
+                counts_by_model = (
+                    det_counts_by_model if run_name == "det" else ukn_counts_by_model
+                )
+                dataset_counts = counts_by_model.setdefault(fields[model_col], {})
                 for label in passed_datasets:
                     dataset_counts[label] = dataset_counts.get(label, 0) + 1
             else:
@@ -138,33 +193,55 @@ def collect_results_per_model(labels_by_suite, version):
                 sampled_counts_by_model.setdefault(fields[model_col], []).append(
                     run_counts
                 )
-    return det_counts_by_model, sampled_counts_by_model
+    return det_counts_by_model, ukn_counts_by_model, sampled_counts_by_model
 
 
-def plot_overview(det_counts_by_model, sampled_counts_by_model,
-                 question_totals_by_dataset, total_questions, version):
-    """Grouped stacked bars: the det run and every sampled run per model."""
-    # rank models best-first by their det total passed; alphabetical
-    # tiebreak keeps the order stable
-    models = sorted(
-        det_counts_by_model,
-        key=lambda model: (-sum(det_counts_by_model[model].values()), model),
+def plot_overview(det_counts_by_model, ukn_counts_by_model,
+                  sampled_counts_by_model,
+                  question_totals_by_dataset, total_questions, version):
+    """Grouped stacked bars: the anchor run and every sampled run per model."""
+    # rank models best-first by their anchor run's total passed — the
+    # det run, or the ukn one for models whose provider refuses sampling
+    # control; alphabetical tiebreak keeps the order stable — reference
+    # models keep their own block on the left, ranked among themselves
+    anchor_counts_by_model = dict(ukn_counts_by_model)
+    anchor_counts_by_model.update(det_counts_by_model)
+    ranked = sorted(
+        anchor_counts_by_model,
+        key=lambda model: (-sum(anchor_counts_by_model[model].values()), model),
+    )
+    models = (
+        [model for model in ranked if model in REFERENCE_MODELS]
+        + [model for model in ranked if model not in REFERENCE_MODELS]
     )
     if not models:
-        sys.exit(f"{settings.CSV_PATH}: no deterministic rows yet")
+        sys.exit(f"{settings.CSV_PATH}: no completed anchor rows yet (det or ukn)")
+    # fact boxes come from the model db; a plotted model missing from
+    # models.json exits loudly (load_model_facts)
+    model_facts = load_model_facts(models)
 
     dataset_names = sorted(
         {dataset for counts in det_counts_by_model.values() for dataset in counts}
     )
 
-    # one group of slim bars per model: the det bar on the left, every
-    # sampled run to its right, each marked d / s just below the axis
-    figure, axis = plt.subplots(figsize=(12, 7))
+    # one group of slim bars per model: the anchor bar on the left
+    # (d — or u, unknown sampling), every sampled run to its right,
+    # each marked just below the axis — and below the names a thin strip
+    # with one fact box per model
+    figure = plt.figure(figsize=(12, 7.5))
+    grid = figure.add_gridspec(2, 1, height_ratios=[12, 1])
+    axis = figure.add_subplot(grid[0])
+    facts_axis = figure.add_subplot(grid[1])
     bar_width, bar_gap, group_spacing = 0.22, 0.05, 1.5
     below_axis = axis.get_xaxis_transform()  # x in data, y in axes units
     group_centers = []
     for group_number, model in enumerate(models):
-        runs = [("d", det_counts_by_model[model])] + [
+        anchor_runs = []
+        if model in det_counts_by_model:
+            anchor_runs.append(("d", det_counts_by_model[model]))
+        if model in ukn_counts_by_model:
+            anchor_runs.append(("u", ukn_counts_by_model[model]))
+        runs = anchor_runs + [
             ("s", section_counts)
             for section_counts in sampled_counts_by_model.get(model, [])
         ]
@@ -194,7 +271,7 @@ def plot_overview(det_counts_by_model, sampled_counts_by_model,
             )
 
         # dotted line across the group's bars at the model's average
-        # total passed over all of its runs (the d and every s one);
+        # total passed over all of its runs (the anchor and every s one);
         # bar() centers each bar on x, so the group's visual edge sits
         # half a bar to the left of left
         average_total = sum(
@@ -206,7 +283,21 @@ def plot_overview(det_counts_by_model, sampled_counts_by_model,
             [average_total, average_total],
             linestyle=":", color="black",
         )
+        # the average's share of all questions rides the line's right end
+        axis.text(
+            group_left + group_width + 0.05, average_total,
+            f"{100 * average_total / total_questions:.0f}%",
+            va="center", ha="left", fontsize=8, color="black",
+        )
         group_centers.append(group_center)
+
+    # orange dotted line between the reference block and the ranked rest
+    references_plotted = sum(model in REFERENCE_MODELS for model in models)
+    if 0 < references_plotted < len(models):
+        axis.axvline(
+            (references_plotted - 0.5) * group_spacing,
+            linestyle=":", color="orange", linewidth=3,
+        )
 
     # dotted reference line: every question of every configured suite
     reference_line = axis.axhline(
@@ -218,7 +309,7 @@ def plot_overview(det_counts_by_model, sampled_counts_by_model,
     axis.set_xlim(group_centers[0] - 0.8, group_centers[-1] + 0.8)
     axis.set_xticks(group_centers)
     axis.set_xticklabels(models, rotation=90)
-    axis.tick_params(axis="x", pad=18)  # model names sit below the d/s marks
+    axis.tick_params(axis="x", pad=18)  # model names sit below the run marks
     axis.set_ylabel("questions passed")
     axis.set_title("passed questions per model")
 
@@ -238,7 +329,7 @@ def plot_overview(det_counts_by_model, sampled_counts_by_model,
     )
     axis.legend(
         handles=[*section_handles, reference_line, average_handle],
-        title="dataset", loc="upper right", bbox_to_anchor=(1.0, 0.80),
+        title="dataset", loc="upper right", bbox_to_anchor=(1.0, 0.68),
     )
 
     # plain-words note box pinned to the top-right corner: the legend is
@@ -247,29 +338,47 @@ def plot_overview(det_counts_by_model, sampled_counts_by_model,
     axis.text(
         0.98, 0.97,
         "Each group: the d bar is the deterministic run,\n"
-        "the s bars are its sampled runs. Counts inside the\n"
-        "bars are passes per section; each section's total\n"
-        "is in the legend. The sections are described in\n"
-        "the sections below.",
+        "the s bars are its sampled runs; a u bar is a run\n"
+        "whose sampling the provider leaves at its default\n"
+        "(claude: no greedy pinning available). Counts inside\n"
+        "the bars are passes per section; each section's\n"
+        "total is in the legend. The sections are described\n"
+        "in the sections below. The orange dotted line cuts\n"
+        "off the reference models (left block) from the rest.",
         transform=axis.transAxes, ha="right", va="top", fontsize=8,
         bbox={"boxstyle": "round", "facecolor": "white", "edgecolor": "gray"},
     )
+    # the facts strip below the names: one rounded box per model,
+    # carrying its db facts (total, active, release)
+    facts_axis.set_xlim(axis.get_xlim())
+    facts_axis.set_ylim(0, 1)
+    facts_axis.axis("off")
+    for center, model in zip(group_centers, models):
+        facts_axis.text(
+            center, 0.5, model_facts[model],
+            ha="center", va="center", fontsize=7,
+            bbox={"boxstyle": "round,pad=0.35", "facecolor": "white", "edgecolor": "gray"},
+        )
+
     figure.tight_layout()
     os.makedirs(os.path.dirname(OUT_PATH) or ".", exist_ok=True)
     figure.savefig(OUT_PATH)
     print(f"Wrote {OUT_PATH} (version {version})")
 
-    # per-model totals in the console: det plus every sampled run's total
+    # per-model totals in the console: the anchor run plus every
+    # sampled run's total
     for model in models:
-        det_total = sum(det_counts_by_model[model].values())
+        anchor = det_counts_by_model.get(model) or ukn_counts_by_model[model]
+        anchor_kind = "det" if model in det_counts_by_model else "ukn"
+        anchor_total = sum(anchor.values())
         sampled_runs = sampled_counts_by_model.get(model, [])
         if sampled_runs:
             run_totals = ", ".join(
                 str(sum(run.values())) for run in sampled_runs
             )
-            print(f"  {model}: {det_total} det; sampled runs: {run_totals}")
+            print(f"  {model}: {anchor_total} {anchor_kind}; sampled runs: {run_totals}")
         else:
-            print(f"  {model}: {det_total} (deterministic only)")
+            print(f"  {model}: {anchor_total} ({anchor_kind} only)")
 
 
 def main():
@@ -277,11 +386,11 @@ def main():
     question_totals_by_dataset = count_questions_per_dataset(labels_by_suite)
     total_questions = sum(question_totals_by_dataset.values())
     version = load_current_version()
-    det_counts_by_model, sampled_counts_by_model = collect_results_per_model(
-        labels_by_suite, version
+    det_counts_by_model, ukn_counts_by_model, sampled_counts_by_model = (
+        collect_results_per_model(labels_by_suite, version)
     )
     plot_overview(
-        det_counts_by_model, sampled_counts_by_model,
+        det_counts_by_model, ukn_counts_by_model, sampled_counts_by_model,
         question_totals_by_dataset, total_questions, version,
     )
 

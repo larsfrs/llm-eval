@@ -8,6 +8,8 @@ module attribute.
 """
 
 import os
+import re
+import sys
 from datetime import datetime
 
 ENV_PATH = os.environ.get("ENV_FILE", ".env")
@@ -37,3 +39,26 @@ CSV_PATH = os.environ.get("CSV_PATH", "results.csv")  # results CSV
 LOG_DIR = os.environ.get("LOG_DIR", "logs")  # transcript directory
 LOG_NAME = f"run_{datetime.now():%Y-%m-%d_%H-%M-%S}.txt"  # session transcript
 OVERWRITE_CSV = os.environ.get("OVERWRITE_CSV", "").lower() in ("1", "true", "yes")
+
+
+HEADER_REF = re.compile(r"\$([A-Za-z_][A-Za-z0-9_]*)")
+
+
+def resolve_headers(headers):
+    """Eval.json model headers, sent as-is: $ENV_NAME references in the
+    values resolve from the environment (real env first, then the .env
+    file — never literal secrets in the committed config). A reference
+    that does not resolve exits loudly naming the header."""
+    resolved = {}
+    for name, value in headers.items():
+        if not isinstance(value, str):
+            sys.exit(f"settings.py: header {name!r} must be a string, got {value!r}")
+
+        def substitute(match):
+            env_name = match.group(1)
+            if env_name not in os.environ:
+                sys.exit(f"settings.py: header {name!r} references ${env_name}, which is not set")
+            return os.environ[env_name]
+
+        resolved[name] = HEADER_REF.sub(substitute, value)
+    return resolved

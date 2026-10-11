@@ -1,101 +1,191 @@
 {
   "version": "v2",
+  "streaming": true,
   "models": [
     {
-      "name": "Qwen3.6-35B-A3B-UD-Q4_K_M",
-      "base_url": "http://192.168.0.95:8080/v1",
-      "model_id": "Qwen3.6-35B-A3B-UD-Q4_K_M",
-      "api_key_env": "API_KEY_LOCAL",
+      "name": "claude-opus-4-8-no-think",
+      "base_url": "https://api.anthropic.com/v1",
+      "model_id": "claude-opus-4-8",
+      "headers": {"Authorization": "Bearer $API_KEY_AT"},
       "params": {
-        "temperature": 1.0,
-        "top_p": 0.95,
-        "top_k": 20,
-        "min_p": 0.0,
-        "presence_penalty": 1.5,
-        "repeat_penalty": 1.0
-      }
+        "max_tokens": 4096
+      },
+      "use_ukn_only": true
     },
     {
-      "name": "gemma-4-E4B-it-Q4_K_M",
+      "name": "claude-opus-5-think",
+      "base_url": "https://api.anthropic.com/v1",
+      "model_id": "claude-opus-5",
+      "headers": {"Authorization": "Bearer $API_KEY_AT"},
+      "params": {
+        "reasoning_effort": "high",
+        "max_tokens": 4096
+      },
+      "use_ukn_only": true
+    },
+    {
+      "name": "claude-fable-5-1",
+      "base_url": "https://api.anthropic.com/v1",
+      "model_id": "claude-fable-5-1",
+      "headers": {"Authorization": "Bearer $API_KEY_AT"},
+      "params": {
+        "reasoning_effort": "high",
+        "max_tokens": 4096
+      },
+      "use_ukn_only": true
+    },
+    {
+      "name": "gemma-4-E4B-it-qat-UD-Q4_K_XL",
       "base_url": "http://192.168.0.95:8080/v1",
-      "model_id": "gemma-4-E4B-it-Q4_K_M",
-      "api_key_env": "API_KEY_LOCAL",
+      "model_id": "gemma-4-E4B-it-qat-UD-Q4_K_XL",
+      "headers": {"Authorization": "Bearer $API_KEY_LOCAL"},
       "params": {
         "temperature": 1.0,
         "top_p": 0.95,
         "top_k": 64,
         "min_p": 0.0,
         "presence_penalty": 0.0,
-        "repeat_penalty": 1.0
+        "repeat_penalty": 1.0,
+        "max_tokens": 4096
+      }
+    },
+    {
+      "name": "DeepSeek-R1-Distill-Qwen-7B-Q4_K_M",
+      "base_url": "http://192.168.0.95:8080/v1",
+      "model_id": "DeepSeek-R1-Distill-Qwen-7B-Q4_K_M",
+      "headers": {"Authorization": "Bearer $API_KEY_LOCAL"},
+      "params": {
+        "temperature": 0.6,
+        "top_p": 0.95,
+        "top_k": 0,
+        "min_p": 0.0,
+        "presence_penalty": 0.0,
+        "repeat_penalty": 1.0,
+        "max_tokens": 4096
+      }
+    },
+    {
+      "name": "gpt-oss-20b-Q4_K_M",
+      "base_url": "http://192.168.0.95:8080/v1",
+      "model_id": "gpt-oss-20b-Q4_K_M",
+      "headers": {"Authorization": "Bearer $API_KEY_LOCAL"},
+      "params": {
+        "temperature": 1.0,
+        "top_p": 1.0,
+        "top_k": 0,
+        "min_p": 0.0,
+        "presence_penalty": 1.5,
+        "repeat_penalty": 1.0,
+        "max_tokens": 4096
+      }
+    },
+    {
+      "name": "Qwen3.6-35B-A3B-UD-Q4_K_M",
+      "base_url": "http://192.168.0.95:8080/v1",
+      "model_id": "Qwen3.6-35B-A3B-UD-Q4_K_M",
+      "headers": {"Authorization": "Bearer $API_KEY_LOCAL"},
+      "params": {
+        "temperature": 1.0,
+        "top_p": 0.95,
+        "top_k": 20,
+        "min_p": 0.0,
+        "presence_penalty": 1.5,
+        "repeat_penalty": 1.0,
+        "max_tokens": 4096
+      }
+    },
+    {
+      "name": "gemma-4-E4B-it-Q4_K_M",
+      "base_url": "http://192.168.0.95:8080/v1",
+      "model_id": "gemma-4-E4B-it-Q4_K_M",
+      "headers": {"Authorization": "Bearer $API_KEY_LOCAL"},
+      "params": {
+        "temperature": 1.0,
+        "top_p": 0.95,
+        "top_k": 64,
+        "min_p": 0.0,
+        "presence_penalty": 0.0,
+        "repeat_penalty": 1.0,
+        "max_tokens": 4096
       }
     },
     {
       "name": "Qwen3.5-2B-Q4_K_M",
       "base_url": "http://192.168.0.95:8080/v1",
       "model_id": "Qwen3.5-2B-Q4_K_M",
-      "api_key_env": "API_KEY_LOCAL",
+      "headers": {"Authorization": "Bearer $API_KEY_LOCAL"},
       "params": {
         "temperature": 1.0,
         "top_p": 1.0,
         "top_k": 20,
         "min_p": 0.0,
         "presence_penalty": 2.0,
-        "repeat_penalty": 1.0
+        "repeat_penalty": 1.0,
+        "max_tokens": 4096
       }
     },
     {
       "name": "Qwen3.5-9B-Q4_K_M",
       "base_url": "http://192.168.0.95:8080/v1",
       "model_id": "Qwen3.5-9B-Q4_K_M",
-      "api_key_env": "API_KEY_LOCAL",
+      "headers": {"Authorization": "Bearer $API_KEY_LOCAL"},
       "params": {
         "temperature": 1.0,
         "top_p": 0.95,
         "top_k": 20,
         "min_p": 0.0,
         "presence_penalty": 1.5,
-        "repeat_penalty": 1.0
+        "repeat_penalty": 1.0,
+        "max_tokens": 4096
       }
     },
     {
       "name": "Ornith-1.5-9B-Q4_K_M",
       "base_url": "http://192.168.0.95:8080/v1",
       "model_id": "Ornith-1.5-9B-Q4_K_M",
-      "api_key_env": "API_KEY_LOCAL",
+      "headers": {"Authorization": "Bearer $API_KEY_LOCAL"},
       "params": {
         "temperature": 1.0,
         "top_p": 0.95,
         "top_k": 20,
         "min_p": 0.0,
         "presence_penalty": 1.5,
-        "repeat_penalty": 1.0
+        "repeat_penalty": 1.0,
+        "max_tokens": 4096
       }
     },
     {
       "name": "Phi-4-mini-instruct-Q4_K_M",
       "base_url": "http://192.168.0.95:8080/v1",
       "model_id": "Phi-4-mini-instruct-Q4_K_M",
-      "api_key_env": "API_KEY_LOCAL",
+      "headers": {"Authorization": "Bearer $API_KEY_LOCAL"},
       "params": {
-        "temperature": 0.0
+        "temperature": 0.0,
+        "max_tokens": 4096
       }
     },
     {
       "name": "qwen2.5-coder-7b-instruct-q4_k_m",
       "base_url": "http://192.168.0.95:8080/v1",
       "model_id": "qwen2.5-coder-7b-instruct-q4_k_m",
-      "api_key_env": "API_KEY_LOCAL",
+      "headers": {"Authorization": "Bearer $API_KEY_LOCAL"},
       "params": {
         "temperature": 0.7,
         "top_p": 0.8,
         "top_k": 20,
         "min_p": 0.0,
         "presence_penalty": 0.0,
-        "repeat_penalty": 1.1
+        "repeat_penalty": 1.1,
+        "max_tokens": 4096
       }
     }
   ],
   "runs": [
+    {
+      "name": "smp",
+      "repeats": 1,
+      "max_tokens": 4096
+    },
     {
       "name": "det",
       "temperature": 0.0,
@@ -104,11 +194,6 @@
       "min_p": 0.0,
       "presence_penalty": 0.0,
       "repeat_penalty": 1.0,
-      "max_tokens": 4096
-    },
-    {
-      "name": "smp",
-      "repeats": 1,
       "max_tokens": 4096
     }
   ],

@@ -1,0 +1,167 @@
+[
+  {
+    "name": "gemma-4-E4B-it-Q4_K_M",
+    "params_active": "4.5B effective",
+    "params_total": "~8B",
+    "architecture": "Dense",
+    "thinking": "yes, switchable",
+    "quantization": "Q4_K_M",
+    "released": "2026-04",
+    "licence": "Apache 2.0",
+    "status": "done"
+  },
+  {
+    "name": "Qwen3.5-2B-Q4_K_M",
+    "params_active": "~2B",
+    "params_total": "~2B",
+    "architecture": "Dense",
+    "thinking": "yes, off by default",
+    "quantization": "Q4_K_M",
+    "released": "2026-03",
+    "licence": "Apache 2.0",
+    "status": "done"
+  },
+  {
+    "name": "Qwen3.5-9B-Q4_K_M",
+    "params_active": "~9B",
+    "params_total": "~9B",
+    "architecture": "Dense",
+    "thinking": "yes, on by default",
+    "quantization": "Q4_K_M",
+    "released": "2026-03",
+    "licence": "Apache 2.0",
+    "status": "done"
+  },
+  {
+    "name": "Ornith-1.5-9B-Q4_K_M",
+    "params_active": "~9B",
+    "params_total": "~9B",
+    "architecture": "Dense",
+    "thinking": "yes, on by default",
+    "quantization": "Q4_K_M",
+    "released": "2026-08",
+    "licence": "MIT",
+    "status": "done"
+  },
+  {
+    "name": "Qwen3.6-35B-A3B-UD-Q4_K_M",
+    "params_active": "~3B",
+    "params_total": "~35B",
+    "architecture": "MoE",
+    "thinking": "yes, on by default",
+    "quantization": "UD-Q4_K_M",
+    "released": "2026-04",
+    "licence": "Apache 2.0",
+    "status": "done"
+  },
+  {
+    "name": "Phi-4-mini-instruct-Q4_K_M",
+    "params_active": "3.8B",
+    "params_total": "3.8B",
+    "architecture": "Dense",
+    "thinking": "no dedicated thinking mode",
+    "quantization": "Q4_K_M",
+    "released": "2025-02",
+    "licence": "MIT",
+    "status": "done"
+  },
+  {
+    "name": "qwen2.5-coder-7b-instruct-q4_k_m",
+    "params_active": "~7B",
+    "params_total": "~7B",
+    "architecture": "Dense",
+    "thinking": "no dedicated thinking mode",
+    "quantization": "Q4_K_M",
+    "released": "2024-09",
+    "licence": "Apache 2.0",
+    "status": "done"
+  },
+  {
+    "name": "gemma-4-E4B-it-qat-UD-Q4_K_XL",
+    "params_active": "4.5B effective",
+    "params_total": "~8B",
+    "architecture": "Dense",
+    "thinking": "yes, switchable",
+    "quantization": "UD-Q4_K_XL (QAT)",
+    "released": "2026-04",
+    "licence": "Apache 2.0",
+    "status": "testing"
+  },
+  {
+    "name": "DeepSeek-R1-Distill-Qwen-7B-Q4_K_M",
+    "params_active": "~7B",
+    "params_total": "~7B",
+    "architecture": "Dense",
+    "thinking": "yes, always",
+    "quantization": "Q4_K_M",
+    "released": "2025-01",
+    "licence": "MIT",
+    "status": "testing"
+  },
+  {
+    "name": "gpt-oss-20b-Q4_K_M",
+    "params_active": "~3.6B",
+    "params_total": "~20B",
+    "architecture": "MoE",
+    "thinking": "yes, on by default",
+    "quantization": "Q4_K_M",
+    "released": "2025-08",
+    "licence": "Apache 2.0",
+    "status": "testing"
+  },
+  {
+    "name": "zai-glm-5-3",
+    "params_active": "40B",
+    "params_total": "753B",
+    "architecture": "MoE",
+    "thinking": "yes",
+    "quantization": "none — served via API",
+    "released": "2026-09",
+    "licence": "",
+    "status": "reference"
+  },
+  {
+    "name": "claude-opus-4-8-no-think",
+    "params_active": "",
+    "params_total": "",
+    "architecture": "",
+    "thinking": "off — not sent via the compat API",
+    "quantization": "none — served via API",
+    "released": "",
+    "licence": "proprietary",
+    "status": "reference"
+  },
+  {
+    "name": "claude-opus-5-think",
+    "params_active": "",
+    "params_total": "",
+    "architecture": "",
+    "thinking": "yes — reasoning_effort high",
+    "quantization": "none — served via API",
+    "released": "",
+    "licence": "proprietary",
+    "status": "reference"
+  },
+  {
+    "name": "claude-fable-5-1",
+    "params_active": "",
+    "params_total": "",
+    "architecture": "",
+    "thinking": "yes, always — adaptive",
+    "quantization": "none — served via API",
+    "released": "2026-08",
+    "licence": "proprietary",
+    "status": "reference"
+  },
+  {
+    "name": "gemma-4-26B-A4B-it-UD-Q4_K_M",
+    "params_active": "~4B",
+    "params_total": "~26B",
+    "architecture": "MoE",
+    "thinking": "yes, switchable",
+    "quantization": "UD-Q4_K_M",
+    "released": "",
+    "licence": "",
+    "status": "paused"
+  }
+]

@@ -6,15 +6,27 @@ I record results in a CSV from which the result graphs below are made.
 
 ### Models tested / in progress
 
-| Model | #b parameters (active/effective) | #b parameters (total) | architecture | thinking | quantization | release date (YYYY-MM) | licence |
+Regenerate with `uv run models.py` (source: `models.json`).
+
+<!-- models: start -->
+| Model | Params (active/effective) | Params (total) | Architecture | Thinking | Quantization | Released | Licence |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `[Done]` [gemma-4-E4B-it-Q4_K_M]() | 4.5B effective | ~8B | Dense | yes, switchable | Q4_K_M | 2026-04 | Apache 2.0 |
-| `[Done]` [Qwen3.5-2B-Q4_K_M]() | ~2B | ~2B | Dense | yes, off by default | Q4_K_M | 2026-03 | Apache 2.0 |
-| `[Done]` [Qwen3.5-9B-Q4_K_M]() | ~9B | ~9B | Dense | yes, on by default | Q4_K_M | 2026-03 | Apache 2.0 |
-| `[Done]` [Ornith-1.5-9B-Q4_K_M]() | ~9B | ~9B | Dense | yes, on by default | Q4_K_M | 2026-08 | MIT |
-| `[Done]` [Qwen3.6-35B-A3B-UD-Q4_K_M]() | ~3B | ~35B | MoE | yes, on by default | UD-Q4_K_M | 2026-04 | Apache 2.0 |
-| `[Done]` [Phi-4-mini-instruct-Q4_K_M]() | 3.8B | 3.8B | Dense | no dedicated thinking mode | Q4_K_M | 2025-02 | MIT |
-| `[Done]` [Qwen/Qwen2.5-Coder-7B-Instruct-GGUF]() | ~7B | ~7B | Dense | no dedicated thinking mode | Q4_K_M | 2024-09 | Apache 2.0 |
+| `[Done]` gemma-4-E4B-it-Q4_K_M | 4.5B effective | ~8B | Dense | yes, switchable | Q4_K_M | 2026-04 | Apache 2.0 |
+| `[Done]` Qwen3.5-2B-Q4_K_M | ~2B | ~2B | Dense | yes, off by default | Q4_K_M | 2026-03 | Apache 2.0 |
+| `[Done]` Qwen3.5-9B-Q4_K_M | ~9B | ~9B | Dense | yes, on by default | Q4_K_M | 2026-03 | Apache 2.0 |
+| `[Done]` Ornith-1.5-9B-Q4_K_M | ~9B | ~9B | Dense | yes, on by default | Q4_K_M | 2026-08 | MIT |
+| `[Done]` Qwen3.6-35B-A3B-UD-Q4_K_M | ~3B | ~35B | MoE | yes, on by default | UD-Q4_K_M | 2026-04 | Apache 2.0 |
+| `[Done]` Phi-4-mini-instruct-Q4_K_M | 3.8B | 3.8B | Dense | no dedicated thinking mode | Q4_K_M | 2025-02 | MIT |
+| `[Done]` qwen2.5-coder-7b-instruct-q4_k_m | ~7B | ~7B | Dense | no dedicated thinking mode | Q4_K_M | 2024-09 | Apache 2.0 |
+| `[Testing]` gemma-4-E4B-it-qat-UD-Q4_K_XL | 4.5B effective | ~8B | Dense | yes, switchable | UD-Q4_K_XL (QAT) | 2026-04 | Apache 2.0 |
+| `[Testing]` DeepSeek-R1-Distill-Qwen-7B-Q4_K_M | ~7B | ~7B | Dense | yes, always | Q4_K_M | 2025-01 | MIT |
+| `[Testing]` gpt-oss-20b-Q4_K_M | ~3.6B | ~20B | MoE | yes, on by default | Q4_K_M | 2025-08 | Apache 2.0 |
+| `[Reference]` zai-glm-5-3 | 40B | 753B | MoE | yes | none — served via API | 2026-09 |  |
+| `[Reference]` claude-opus-4-8-no-think |  |  |  | off — not sent via the compat API | none — served via API |  | proprietary |
+| `[Reference]` claude-opus-5-think |  |  |  | yes — reasoning_effort high | none — served via API |  | proprietary |
+| `[Reference]` claude-fable-5-1 |  |  |  | yes, always — adaptive | none — served via API | 2026-08 | proprietary |
+| `[Paused]` gemma-4-26B-A4B-it-UD-Q4_K_M | ~4B | ~26B | MoE | yes, switchable | UD-Q4_K_M |  |  |
+<!-- models: end -->
 
 
 #### Results
